@@ -3,9 +3,48 @@
 #include <cassert>
 #include <string>
 #include <cstring>
+#include "Area.h"
+#include <X11/Xlib.h>
+
+
+Area* g_displayArea = NULL;
+Area* g_tabletArea = NULL;
+const char* g_DeviceName = "G430S";
+libusb_device_handle* tabletHandle = NULL;
 
 libusb_context* context = NULL;
 libusb_device** list = NULL;
+
+Display* display;
+
+void initXlib() {
+	display = XOpenDisplay(NULL);
+	if (display == NULL) {
+		printf("Could not open display!");
+		return;
+	}
+}
+
+void closeXlib() {
+	XCloseDisplay(display);
+}
+
+void move_to(int x, int y) {
+	XEvent event;
+	XQueryPointer(display, DefaultRootWindow(display), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
+			&event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
+	int lastX, lastY;
+	lastX = event.xbutton.x;
+	lastY = event.xbutton.y;
+	
+	//printf("%d, %d", lastX, lastY);
+
+	x -= lastX;
+	y -= lastY;
+	XWarpPointer(display, None, None, 0, 0, 0, 0, x, y);
+	XFlush(display);
+}
+
 
 libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t size) {
 	int res = 0;
@@ -31,10 +70,11 @@ libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t s
 	return NULL;
 }
 
-const char* g_DeviceName = "G430S";
-libusb_device_handle* tabletHandle = NULL;
-
 int main() {
+	g_displayArea = new Area(0, 0, 1920, 1080);
+	g_tabletArea = new Area(0, 16078, 22319, 16689);
+
+	initXlib();
 	libusb_init(&context);
 
 	size_t size = libusb_get_device_list(context, &list); 	
@@ -60,15 +100,20 @@ int main() {
 	printf("%d\n", res);
 	assert(res == 0);
 
+	int x = 0, y = 0, pressure = 0;	
 	while (true) {
 		res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
 		if (transferred != 0) {
-			printf("Button pressed: %d ", buffer[1]);
-			unsigned short x, y;	
+			//printf("Button pressed: %d ", buffer[1]);
 			x = buffer[3] << 8 | buffer[2];
 			y = buffer[5] << 8 | buffer[4];
+			
+			pressure = buffer[7] << 8 | buffer[6];
 
-			printf("x: %d, y: %d\n", x, y);
+			//printf("x: %d, y: %d, pressure: %d\n", x, y, pressure);
+
+			Area::map(x, y, g_tabletArea, g_displayArea);
+			move_to(x, y);
 		}
 	}
 	
@@ -76,7 +121,8 @@ int main() {
 	libusb_close(tabletHandle);
 	libusb_free_device_list(list, 1);
 	libusb_exit(NULL);
-
+	closeXlib();
+	delete g_tabletArea, g_displayArea;
 	return 0;
 }	
 
