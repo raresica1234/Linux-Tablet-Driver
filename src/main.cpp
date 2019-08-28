@@ -1,0 +1,82 @@
+#include <libusb-1.0/libusb.h>
+#include <iostream>
+#include <cassert>
+#include <string>
+#include <cstring>
+
+libusb_context* context = NULL;
+libusb_device** list = NULL;
+
+libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t size) {
+	int res = 0;
+	unsigned char uname[250] = {0};
+	for (size_t i = 0; i <= strlen(name); i++)
+		uname[i] = static_cast<unsigned char>(name[i]);
+
+	unsigned char productName[250] = {0};
+	for (size_t i = 0; i < size; i++) {
+		libusb_device_descriptor desc = {0};
+		res = libusb_get_device_descriptor(list[i], &desc);
+		assert(res == LIBUSB_SUCCESS);
+		libusb_device_handle* deviceHandle = NULL;
+		res = libusb_open(list[i], &deviceHandle);
+		assert(res == LIBUSB_SUCCESS);
+		res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
+		assert(res);
+		libusb_close(deviceHandle);
+		if (memcmp(productName, uname, strlen(name)) == 0)
+			return list[i];
+		
+	}
+	return NULL;
+}
+
+const char* g_DeviceName = "G430S";
+libusb_device_handle* tabletHandle = NULL;
+
+int main() {
+	libusb_init(&context);
+
+	size_t size = libusb_get_device_list(context, &list); 	
+	printf("Number of devices: %lu\n", size);
+	libusb_device* device = NULL;
+	device = pickDeviceByName(g_DeviceName, list, size);
+	if (device == NULL) {
+		printf("Could not find XP-PEN G430s tablet\n");
+		return 0;
+	}
+	libusb_open(device, &tabletHandle);
+
+	unsigned char buffer[1000] = {0};
+	int transferred = 0;
+
+	if (libusb_kernel_driver_active(tabletHandle, 0) != 0) {
+		printf("Kernel driver is active, detaching...");
+		int res = libusb_detach_kernel_driver(tabletHandle, 0);
+		assert(res == 0);
+	}
+
+	int res = libusb_claim_interface(tabletHandle, 0);
+	printf("%d\n", res);
+	assert(res == 0);
+
+	while (true) {
+		res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
+		if (transferred != 0) {
+			printf("Button pressed: %d ", buffer[1]);
+			unsigned short x, y;	
+			x = buffer[3] << 8 | buffer[2];
+			y = buffer[5] << 8 | buffer[4];
+
+			printf("x: %d, y: %d\n", x, y);
+		}
+	}
+	
+	libusb_release_interface(tabletHandle, 0);
+	libusb_close(tabletHandle);
+	libusb_free_device_list(list, 1);
+	libusb_exit(NULL);
+
+	return 0;
+}	
+
