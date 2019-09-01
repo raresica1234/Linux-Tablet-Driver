@@ -1,10 +1,13 @@
 #include <libusb-1.0/libusb.h>
+#include <X11/Xlib.h>
+
 #include <iostream>
 #include <cassert>
 #include <string>
 #include <cstring>
+#include <chrono>
+
 #include "Area.h"
-#include <X11/Xlib.h>
 
 
 Area* g_displayArea = NULL;
@@ -63,6 +66,7 @@ libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t s
 		res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
 		assert(res);
 		libusb_close(deviceHandle);
+		printf("Found device, checking if it's the correct name...\n");
 		if (memcmp(productName, uname, strlen(name)) == 0)
 			return list[i];
 		
@@ -76,7 +80,7 @@ int main() {
 
 	initXlib();
 	libusb_init(&context);
-
+	printf("Getting the device list...\n");
 	size_t size = libusb_get_device_list(context, &list); 	
 	printf("Number of devices: %lu\n", size);
 	libusb_device* device = NULL;
@@ -85,6 +89,9 @@ int main() {
 		printf("Could not find XP-PEN G430s tablet\n");
 		return 0;
 	}
+	else 
+		printf("Device found succesfully\n");
+
 	libusb_open(device, &tabletHandle);
 
 	unsigned char buffer[1000] = {0};
@@ -94,27 +101,43 @@ int main() {
 		printf("Kernel driver is active, detaching...");
 		int res = libusb_detach_kernel_driver(tabletHandle, 0);
 		assert(res == 0);
+		printf("Kernel driver detached!\n");
 	}
 
+	printf("Claiming interface...\n");
 	int res = libusb_claim_interface(tabletHandle, 0);
-	printf("%d\n", res);
 	assert(res == 0);
+	printf("Interface claimed!\n");
 
 	int x = 0, y = 0, pressure = 0;	
+	
+	auto start = std::chrono::system_clock::now();
+	int frames = 0;
+	auto current = start;
+
+	std::chrono::duration<double> elapsed;
+
 	while (true) {
+		frames++;
 		res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
 		if (transferred != 0) {
-			//printf("Button pressed: %d ", buffer[1]);
 			x = buffer[3] << 8 | buffer[2];
 			y = buffer[5] << 8 | buffer[4];
 			
 			pressure = buffer[7] << 8 | buffer[6];
-
-			//printf("x: %d, y: %d, pressure: %d\n", x, y, pressure);
-
+			
 			Area::map(x, y, g_tabletArea, g_displayArea);
 			move_to(x, y);
+
 		}
+		elapsed = current - start;
+		if(elapsed.count() >= 1.0) {
+			printf("Polling rate: %dHz\n", frames);
+			frames = 0;
+			start = current;
+		}
+			
+		current = std::chrono::system_clock::now();
 	}
 	
 	libusb_release_interface(tabletHandle, 0);
