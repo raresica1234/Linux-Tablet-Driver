@@ -40,14 +40,47 @@ void move_to(int x, int y) {
 	lastX = event.xbutton.x;
 	lastY = event.xbutton.y;
 	
-	//printf("%d, %d", lastX, lastY);
-
 	x -= lastX;
 	y -= lastY;
 	XWarpPointer(display, None, None, 0, 0, 0, 0, x, y);
 	XFlush(display);
 }
 
+void click(int button) {	
+	XEvent event = {0};
+	event.type = ButtonPress;
+	event.xbutton.button = button;
+	event.xbutton.same_screen = true;
+	event.xbutton.subwindow = DefaultRootWindow(display);
+	while(event.xbutton.subwindow) {
+		event.xbutton.window = event.xbutton.subwindow;
+		XQueryPointer(display, event.xbutton.window,
+				&event.xbutton.root, &event.xbutton.subwindow,
+				&event.xbutton.x_root, &event.xbutton.y_root,
+				&event.xbutton.x, &event.xbutton.y,
+				&event.xbutton.state);
+	}
+	XSendEvent(display, PointerWindow, True, ButtonPressMask, &event);
+	XFlush(display);
+}
+
+void release(int button) {
+	XEvent event = {0};
+	event.type = ButtonRelease;
+	event.xbutton.button = button;
+	event.xbutton.same_screen = true;
+	event.xbutton.subwindow = DefaultRootWindow(display);
+	while(event.xbutton.subwindow) {
+		event.xbutton.window = event.xbutton.subwindow;
+		XQueryPointer(display, event.xbutton.window,
+				&event.xbutton.root, &event.xbutton.subwindow,
+				&event.xbutton.x_root, &event.xbutton.y_root,
+				&event.xbutton.x, &event.xbutton.y,
+				&event.xbutton.state);
+	}
+	XSendEvent(display, PointerWindow, True, ButtonReleaseMask, &event);
+	XFlush(display);
+}
 
 libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t size) {
 	int res = 0;
@@ -109,7 +142,7 @@ int main() {
 	assert(res == 0);
 	printf("Interface claimed!\n");
 
-	int x = 0, y = 0, pressure = 0;	
+	int x = 0, y = 0, pressure = 0, button = 0;	
 	
 	auto start = std::chrono::system_clock::now();
 	int frames = 0;
@@ -117,10 +150,13 @@ int main() {
 
 	std::chrono::duration<double> elapsed;
 
+	int previous = 0;
+
 	while (true) {
 		frames++;
 		res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
 		if (transferred != 0) {
+			button = (int)buffer[1];
 			x = buffer[3] << 8 | buffer[2];
 			y = buffer[5] << 8 | buffer[4];
 			
@@ -128,6 +164,13 @@ int main() {
 			
 			Area::map(x, y, g_tabletArea, g_displayArea);
 			move_to(x, y);
+			if (button == 1 && previous == 0) {
+				click(Button1);
+				previous = 1;
+			} else if (button == 0 && previous == 1) {
+				release(Button1);
+				previous = 0;
+			}
 
 		}
 		elapsed = current - start;
