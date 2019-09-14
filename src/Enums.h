@@ -1,7 +1,7 @@
 #pragma once
 
 enum class MouseButton {
-	None = 0,
+	NoButton = 0, // Thanks Xlib for not letting me use None.
 	MouseButton1,
 	MouseButton2,
 	MouseButton3,

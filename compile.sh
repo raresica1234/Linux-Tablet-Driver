@@ -1,3 +1,3 @@
 #!/bin/bash
 
-g++ src/main.cpp src/Area.cpp -lX11 `pkg-config --libs --cflags libusb-1.0` -g -o driver.o
+g++ src/CursorHelper.cpp src/Area.cpp src/main.cpp -lX11 `pkg-config --libs --cflags libusb-1.0` -g -o driver.o

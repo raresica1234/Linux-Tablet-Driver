@@ -8,7 +8,7 @@
 #include <chrono>
 
 #include "Area.h"
-
+#include "CursorHelper.h"
 
 Area* g_displayArea = NULL;
 Area* g_tabletArea = NULL;
@@ -17,70 +17,6 @@ libusb_device_handle* tabletHandle = NULL;
 
 libusb_context* context = NULL;
 libusb_device** list = NULL;
-
-Display* display;
-
-void initXlib() {
-	display = XOpenDisplay(NULL);
-	if (display == NULL) {
-		printf("Could not open display!");
-		return;
-	}
-}
-
-void closeXlib() {
-	XCloseDisplay(display);
-}
-
-void move_to(int x, int y) {
-	XEvent event;
-	XQueryPointer(display, DefaultRootWindow(display), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
-			&event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
-	int lastX, lastY;
-	lastX = event.xbutton.x;
-	lastY = event.xbutton.y;
-	
-	x -= lastX;
-	y -= lastY;
-	XWarpPointer(display, None, None, 0, 0, 0, 0, x, y);
-	XFlush(display);
-}
-
-void click(int button) {	
-	XEvent event = {0};
-	event.type = ButtonPress;
-	event.xbutton.button = button;
-	event.xbutton.same_screen = true;
-	event.xbutton.subwindow = DefaultRootWindow(display);
-	while(event.xbutton.subwindow) {
-		event.xbutton.window = event.xbutton.subwindow;
-		XQueryPointer(display, event.xbutton.window,
-				&event.xbutton.root, &event.xbutton.subwindow,
-				&event.xbutton.x_root, &event.xbutton.y_root,
-				&event.xbutton.x, &event.xbutton.y,
-				&event.xbutton.state);
-	}
-	XSendEvent(display, PointerWindow, True, ButtonPressMask, &event);
-	XFlush(display);
-}
-
-void release(int button) {
-	XEvent event = {0};
-	event.type = ButtonRelease;
-	event.xbutton.button = button;
-	event.xbutton.same_screen = true;
-	event.xbutton.subwindow = DefaultRootWindow(display);
-	while(event.xbutton.subwindow) {
-		event.xbutton.window = event.xbutton.subwindow;
-		XQueryPointer(display, event.xbutton.window,
-				&event.xbutton.root, &event.xbutton.subwindow,
-				&event.xbutton.x_root, &event.xbutton.y_root,
-				&event.xbutton.x, &event.xbutton.y,
-				&event.xbutton.state);
-	}
-	XSendEvent(display, PointerWindow, True, ButtonReleaseMask, &event);
-	XFlush(display);
-}
 
 libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t size) {
 	int res = 0;
@@ -108,10 +44,10 @@ libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t s
 }
 
 int main() {
+	CursorHelper* cursor = new CursorHelper();
 	g_displayArea = new Area(0, 0, 1920, 1080);
 	g_tabletArea = new Area(0, 16078, 22319, 16689);
 
-	initXlib();
 	libusb_init(&context);
 	printf("Getting the device list...\n");
 	size_t size = libusb_get_device_list(context, &list); 	
@@ -163,19 +99,19 @@ int main() {
 			pressure = buffer[7] << 8 | buffer[6];
 			
 			Area::map(x, y, g_tabletArea, g_displayArea);
-			move_to(x, y);
+			cursor->MoveTo(x, y);
 			if (button == 1 && previous == 0) {
-				click(Button1);
+				cursor->Click(MouseButton::MouseButton1);
 				previous = 1;
 			} else if (button == 0 && previous == 1) {
-				release(Button1);
+				cursor->Release(MouseButton::MouseButton1);
 				previous = 0;
 			}
 
 		}
 		elapsed = current - start;
 		if(elapsed.count() >= 1.0) {
-			printf("Polling rate: %dHz\n", frames);
+			//printf("Polling rate: %dHz\n", frames);
 			frames = 0;
 			start = current;
 		}
@@ -187,8 +123,7 @@ int main() {
 	libusb_close(tabletHandle);
 	libusb_free_device_list(list, 1);
 	libusb_exit(NULL);
-	closeXlib();
-	delete g_tabletArea, g_displayArea;
+	delete g_tabletArea, g_displayArea, cursor;
 	return 0;
 }	
 

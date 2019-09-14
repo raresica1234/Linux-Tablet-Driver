@@ -1,10 +1,8 @@
-#include "Cursor.h"
+#include <X11/Xlib.h>
+#include "CursorHelper.h"
 
 
-Cursor::Cursor() {
-	// Xlib initialization
-	initXlib();
-	
+CursorHelper::CursorHelper() {	
 	// Picking default display
 	m_Display = XOpenDisplay(NULL);
 	if(m_Display == NULL) {
@@ -13,15 +11,12 @@ Cursor::Cursor() {
 	}
 }
 
-Cursor::~Cursor() {
+CursorHelper::~CursorHelper() {
 	// Closing default display
 	XCloseDisplay(m_Display);
-
-	// Xlib closing
-	closeXlib();
 }
 
-void Cursor::MoveTo(int x, int y) {
+void CursorHelper::MoveTo(int x, int y) {
 	// Creating a dummy event
 	XEvent event;
 
@@ -45,11 +40,11 @@ void Cursor::MoveTo(int x, int y) {
 	XFlush(m_Display);
 }
 
-void Cursor::Click(MouseButton button) {
+void CursorHelper::Click(MouseButton button) {
 	// Creating XEvent to simulate press
 	XEvent event = {0};
 	event.type = ButtonPress;
-	event.xbutton.button = button;
+	event.xbutton.button = static_cast<unsigned int>(button);
 	event.xbutton.same_screen = true;
 	event.xbutton.subwindow = DefaultRootWindow(m_Display);
 	
@@ -60,18 +55,18 @@ void Cursor::Click(MouseButton button) {
 				&event.xbutton.subwindow, &event.xbutton.x_root,
 				&event.xbutton.y_root, &event.xbutton.x, &event.xbutton.y,
 				&event.xbutton.state);
-		XSendEvent(display, PointerWindow, True, ButtonPressMask, &event);
+		XSendEvent(m_Display, PointerWindow, True, ButtonPressMask, &event);
 	}
 
 	// Flushing changes
 	XFlush(m_Display);
 }
 
-void Cursor::Release(MouseButton button) {
+void CursorHelper::Release(MouseButton button) {
 	// Creating XEvent to simulate press
 	XEvent event = {0};
 	event.type = ButtonRelease;
-	event.xbutton.button = button;
+	event.xbutton.button = static_cast<unsigned int>(button);
 	event.xbutton.same_screen = true;
 	event.xbutton.subwindow = DefaultRootWindow(m_Display);
 	
@@ -82,7 +77,7 @@ void Cursor::Release(MouseButton button) {
 				&event.xbutton.subwindow, &event.xbutton.x_root,
 				&event.xbutton.y_root, &event.xbutton.x, &event.xbutton.y,
 				&event.xbutton.state);
-		XSendEvent(display, PointerWindow, True, ButtonReleaseMask, &event);
+		XSendEvent(m_Display, PointerWindow, True, ButtonReleaseMask, &event);
 	}
 
 	// Flushing changes
