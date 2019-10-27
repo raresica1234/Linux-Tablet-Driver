@@ -23,6 +23,15 @@ TabletDriver::TabletDriver(const char* configFolder) {
 			return;
 		printf("Kernel driver detached!\n");
 	}
+	
+	if(libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
+		printf("Registering hotplug callback\n");
+		libusb_device_descriptor desc = {0};
+		int res = libusb_get_device_descriptor(m_TabletDevice, &desc);
+		assert(res == LIBUSB_SUCCESS);
+		res = libusb_hotplug_register_callback(m_Context, (libusb_hotplug_event)(LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT | LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED), LIBUSB_HOTPLUG_NO_FLAGS, desc.idVendor, desc.idProduct, LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback, (void*)this, &m_CallbackHandle);
+		assert(res == LIBUSB_SUCCESS);
+	}
 }
 
 TabletDriver::~TabletDriver() {
@@ -33,6 +42,7 @@ TabletDriver::~TabletDriver() {
 }
 
 TabletPacket TabletDriver::getData() {
+	libusb_handle_events_completed(m_Context, NULL);
 	int transferred;
 	int res = libusb_interrupt_transfer(m_TabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);
 	if (transferred)
@@ -61,10 +71,24 @@ bool TabletDriver::findTablet() {
 		printf("Found device, checking if it's the correct name...\n");
 		if (memcmp(productName, uname, strlen(name)) == 0) {
 			m_TabletHandle = deviceHandle;
+			m_TabletDevice = m_List[i];
 			return true;
 		}
 		libusb_close(deviceHandle);
 		
 	}
 	return false;
+}
+
+int TabletDriver::hotplug_callback(libusb_context* context, libusb_device* device, libusb_hotplug_event event, void* user_data) {
+	TabletDriver* instance = (TabletDriver*)user_data;
+	if (event == LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT) {
+		printf("Hotplug device left\n");
+		if (instance->m_TabletDevice) {
+			libusb_close(instance->m_TabletHandle);
+			instance->m_TabletDevice = nullptr;
+			instance->m_FoundTablet = false;
+		}
+	}
+	
 }
