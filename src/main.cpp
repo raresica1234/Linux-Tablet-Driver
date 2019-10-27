@@ -9,76 +9,20 @@
 
 #include "Area.h"
 #include "CursorHelper.h"
+#include "TabletDriver.h"
+#include "TabletPacket.h"
+
 
 Area* g_displayArea = NULL;
 Area* g_tabletArea = NULL;
-const char* g_DeviceName = "G430S";
-libusb_device_handle* tabletHandle = NULL;
 
-libusb_context* context = NULL;
-libusb_device** list = NULL;
-
-libusb_device* pickDeviceByName(const char* name, libusb_device** list, size_t size) {
-	int res = 0;
-	unsigned char uname[250] = {0};
-	for (size_t i = 0; i <= strlen(name); i++)
-		uname[i] = static_cast<unsigned char>(name[i]);
-
-	unsigned char productName[250] = {0};
-	for (size_t i = 0; i < size; i++) {
-		libusb_device_descriptor desc = {0};
-		res = libusb_get_device_descriptor(list[i], &desc);
-		assert(res == LIBUSB_SUCCESS);
-		libusb_device_handle* deviceHandle = NULL;
-		res = libusb_open(list[i], &deviceHandle);
-		assert(res == LIBUSB_SUCCESS);
-		res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
-		assert(res);
-		libusb_close(deviceHandle);
-		printf("Found device, checking if it's the correct name...\n");
-		if (memcmp(productName, uname, strlen(name)) == 0)
-			return list[i];
-		
-	}
-	return NULL;
-}
 
 int main() {
+	TabletDriver* driver = new TabletDriver("/config/");
 	CursorHelper* cursor = new CursorHelper();
 	g_displayArea = new Area(0, 0, 1920, 1080);
 	g_tabletArea = new Area(0, 16078, 22319, 16689);
 
-	libusb_init(&context);
-	printf("Getting the device list...\n");
-	size_t size = libusb_get_device_list(context, &list); 	
-	printf("Number of devices: %lu\n", size);
-	libusb_device* device = NULL;
-	device = pickDeviceByName(g_DeviceName, list, size);
-	if (device == NULL) {
-		printf("Could not find XP-PEN G430s tablet\n");
-		return 0;
-	}
-	else 
-		printf("Device found succesfully\n");
-
-	libusb_open(device, &tabletHandle);
-
-	unsigned char buffer[1000] = {0};
-	int transferred = 0;
-
-	if (libusb_kernel_driver_active(tabletHandle, 0) != 0) {
-		printf("Kernel driver is active, detaching...");
-		int res = libusb_detach_kernel_driver(tabletHandle, 0);
-		assert(res == 0);
-		printf("Kernel driver detached!\n");
-	}
-
-	printf("Claiming interface...\n");
-	int res = libusb_claim_interface(tabletHandle, 0);
-	assert(res == 0);
-	printf("Interface claimed!\n");
-
-	int x = 0, y = 0, pressure = 0, button = 0;	
 	
 	auto start = std::chrono::system_clock::now();
 	int frames = 0;
@@ -87,42 +31,40 @@ int main() {
 	std::chrono::duration<double> elapsed;
 
 	int previous = 0;
+	TabletPacket packet;
 
-	while (true) {
+	while (driver->foundTablet()) {
 		frames++;
-		res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
-		if (transferred != 0) {
-			button = (int)buffer[1];
-			x = buffer[3] << 8 | buffer[2];
-			y = buffer[5] << 8 | buffer[4];
-			
-			pressure = buffer[7] << 8 | buffer[6];
-			
-			Area::map(x, y, g_tabletArea, g_displayArea);
-			cursor->MoveTo(x, y);
-			if (button == 1 && previous == 0) {
+		packet = driver->getData();
+		if(packet.isValid()){
+			Area::map(packet.x, packet.y, g_tabletArea, g_displayArea);
+			cursor->MoveTo(packet.x, packet.y);
+			if (packet.button == MouseButton::MouseButton1 && previous == 0) {
 				cursor->Click(MouseButton::MouseButton1);
 				previous = 1;
-			} else if (button == 0 && previous == 1) {
+			} else if (packet.button == MouseButton::NoButton && previous == 1) {
 				cursor->Release(MouseButton::MouseButton1);
 				previous = 0;
 			}
-
 		}
+
+		//res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
+		//if (transferred != 0) {
+		//	button = (int)buffer[1];
+		//	x = buffer[3] << 8 | buffer[2];
+		//	y = buffer[5] << 8 | buffer[4];
+		//	
+		//	pressure = buffer[7] << 8 | buffer[6];
 		elapsed = current - start;
 		if(elapsed.count() >= 1.0) {
 			//printf("Polling rate: %dHz\n", frames);
 			frames = 0;
 			start = current;
 		}
-			
 		current = std::chrono::system_clock::now();
 	}
 	
-	libusb_release_interface(tabletHandle, 0);
-	libusb_close(tabletHandle);
-	libusb_free_device_list(list, 1);
-	libusb_exit(NULL);
+	
 	delete g_tabletArea, g_displayArea, cursor;
 	return 0;
 }	

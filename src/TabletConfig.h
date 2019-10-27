@@ -9,6 +9,4 @@ struct TabletConfig {
 	int virtualHeight;
 	int physicalWidth;
 	int physicalHeight;
-
-
 };
