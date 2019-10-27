@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <thread>
 
 #include "TabletPacket.h"
 
@@ -24,6 +25,10 @@ private:
 
 	unsigned char buffer[100] = {0};
 
+	bool m_DriverCrashed = false;
+
+	std::thread* eventThread = nullptr;
+
 public:
 	TabletDriver(const char* configFolder);
 	~TabletDriver();
@@ -31,8 +36,14 @@ public:
 	TabletPacket getData();
 
 	inline bool foundTablet() { return m_FoundTablet; }
+	inline bool hasCrashed() { return m_DriverCrashed; }
 
 private:
+	void pullEvents();
+
 	bool findTablet();
+	void kernelClaim();
+
 	static int hotplug_callback(libusb_context* context, libusb_device* device, libusb_hotplug_event event, void* user_data);
+	static void event_thread(TabletDriver* instance);
 };

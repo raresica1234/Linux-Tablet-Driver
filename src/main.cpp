@@ -33,31 +33,25 @@ int main() {
 	int previous = 0;
 	TabletPacket packet;
 
-	while (driver->foundTablet()) {
+	while (!driver->hasCrashed()) {
 		frames++;
-		packet = driver->getData();
-		if(packet.isValid()){
-			Area::map(packet.x, packet.y, g_tabletArea, g_displayArea);
-			cursor->MoveTo(packet.x, packet.y);
-			if (packet.button == MouseButton::MouseButton1 && previous == 0) {
-				cursor->Click(MouseButton::MouseButton1);
-				previous = 1;
-			} else if (packet.button == MouseButton::NoButton && previous == 1) {
-				cursor->Release(MouseButton::MouseButton1);
-				previous = 0;
+		if (driver->foundTablet()) {
+			packet = driver->getData();
+			if(packet.isValid()){
+				Area::map(packet.x, packet.y, g_tabletArea, g_displayArea);
+				cursor->MoveTo(packet.x, packet.y);
+				if (packet.button == MouseButton::MouseButton1 && previous == 0) {
+					cursor->Click(MouseButton::MouseButton1);
+					previous = 1;
+				} else if (packet.button == MouseButton::NoButton && previous == 1) {
+					cursor->Release(MouseButton::MouseButton1);
+					previous = 0;
+				}
 			}
 		}
-
-		//res = libusb_interrupt_transfer(tabletHandle, 0x82, buffer, sizeof(buffer), &transferred, 10);  
-		//if (transferred != 0) {
-		//	button = (int)buffer[1];
-		//	x = buffer[3] << 8 | buffer[2];
-		//	y = buffer[5] << 8 | buffer[4];
-		//	
-		//	pressure = buffer[7] << 8 | buffer[6];
 		elapsed = current - start;
 		if(elapsed.count() >= 1.0) {
-			//printf("Polling rate: %dHz\n", frames);
+			printf("Polling rate: %dHz\n", frames);
 			frames = 0;
 			start = current;
 		}
