@@ -1,0 +1,3 @@
+[submodule "FuckMake"]
+	path = FuckMake
+	url = https://github.com/JeppeSRC/FuckMake.git
