@@ -1,0 +1,16 @@
+!FuckMake
+
+CC=g++
+CPPFILES=GetFiles(src/,*.cpp,)
+CFLAGS=-lX11 -lXtst `pkg-config --libs --cflags libusb-1.0` -g
+
+OUTPUT_FILE=driver
+
+Compile {
+    Msg(Compiling)
+    !%(CC) %Input %(CFLAGS) -o %Output
+}
+
+build:
+    Execute(Compile, %(CPPFILES), %(OUTPUT_FILE))
+    Msg(Done)
