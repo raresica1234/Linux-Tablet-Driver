@@ -2,7 +2,7 @@
 
 CC=g++
 CPPFILES=GetFiles(src/,*.cpp,)
-CFLAGS=-lX11 -lXtst `pkg-config --libs --cflags libusb-1.0` -g
+CFLAGS=-lX11 -lXtst `pkg-config --libs --cflags libusb-1.0` -pthread -g
 
 OUTPUT_FILE=driver
 
