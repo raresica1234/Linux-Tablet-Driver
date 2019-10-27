@@ -2,3 +2,5 @@
 *.out
 *.swp
 .vscode/
+tools/
+driver
