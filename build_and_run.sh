@@ -2,4 +2,4 @@
 
 ./compile.sh
 
-./driver.o
+./driver
