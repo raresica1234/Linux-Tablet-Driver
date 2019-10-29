@@ -3,7 +3,7 @@
 #include <X11/Xlib.h>
 #include <iostream>
 
-#include "Enums.h"
+#include "core/Enums.h"
 
 class CursorHelper {
 private:

@@ -7,11 +7,10 @@
 #include <cstring>
 #include <chrono>
 
-#include "Area.h"
-#include "CursorHelper.h"
-#include "TabletDriver.h"
-#include "TabletPacket.h"
-
+#include "util/Area.h"
+#include "util/CursorHelper.h"
+#include "core/TabletDriver.h"
+#include "core/TabletPacket.h"
 
 Area* g_displayArea = NULL;
 Area* g_tabletArea = NULL;
@@ -51,7 +50,7 @@ int main() {
 		}
 		elapsed = current - start;
 		if(elapsed.count() >= 1.0) {
-			printf("Polling rate: %dHz\n", frames);
+			//printf("Polling rate: %dHz\n", frames);
 			frames = 0;
 			start = current;
 		}
