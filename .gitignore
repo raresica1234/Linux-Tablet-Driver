@@ -3,5 +3,5 @@
 *.swp
 .vscode/
 tools/
-driver
+driver*
 src/json/
