@@ -1,0 +1,10 @@
+{
+    "G430S":{
+        "manufacturer":"XP-PEN",
+        "numButtons": 3,
+        "virtualWidth": 32768,
+        "virtualHeight": 32768,
+        "physicalWidth": 101.6,
+        "physicalHeight": 76.2
+     }
+}
