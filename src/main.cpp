@@ -17,7 +17,7 @@ Area* g_tabletArea = NULL;
 
 
 int main() {
-	TabletDriver* driver = new TabletDriver("/config/");
+	TabletDriver* driver = new TabletDriver("config");
 	CursorHelper* cursor = new CursorHelper();
 	g_displayArea = new Area(0, 0, 1920, 1080);
 	g_tabletArea = new Area(0, 16078, 22319, 16689);
