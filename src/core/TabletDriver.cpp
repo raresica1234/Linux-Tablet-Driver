@@ -1,8 +1,11 @@
 #include "TabletDriver.h"
 
+TabletConfig* TabletDriver::s_Configs = nullptr;
 
 TabletDriver::TabletDriver(const char* configFolder) {
 	libusb_init(&m_Context);
+	readConfigs(configFolder);
+
 	printf("Getting the device list...\n");
 	m_ListSize = libusb_get_device_list(m_Context, &m_List); 	
 	printf("Number of devices: %lu\n", m_ListSize);
@@ -126,5 +129,32 @@ int TabletDriver::hotplug_callback(libusb_context* context, libusb_device* devic
 void TabletDriver::event_thread(TabletDriver* instance) {
 	while(!instance->hasCrashed()) {
 		instance->pullEvents();
+	}
+}
+
+void TabletDriver::readConfigs(const char* configFolder) {
+	using json = nlohmann::json;
+	std::string tabletConfig = configFolder;
+	tabletConfig.append("/tablets.json");
+	std::ifstream input(tabletConfig.c_str());
+	if(!input.is_open()) {
+		printf("Could not find tablet configs\n");
+		return;
+	}
+	
+	json j;
+	input >> j;
+	input.close();
+	s_Configs = new TabletConfig[j.size()];
+	for (json::iterator it = j.begin(); it != j.end(); it++) {
+		TabletConfig currentConfig;
+		currentConfig.deviceName = it.key();
+		auto current_iteration = it.value();
+		currentConfig.vendorName = current_iteration["manufacturer"].get<std::string>();
+		currentConfig.numButtons = current_iteration["numButtons"].get<int>();
+		currentConfig.virtualWidth = current_iteration["virtualWidth"].get<int>();
+		currentConfig.virtualHeight = current_iteration["virtualHeight"].get<int>();
+		currentConfig.physicalWidth = current_iteration["physicalWidth"].get<int>();
+		currentConfig.physicalHeight = current_iteration["physicalHeight"].get<int>();
 	}
 }

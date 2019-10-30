@@ -5,8 +5,13 @@
 #include <string.h>
 #include <assert.h>
 #include <thread>
+#include <fstream>
+#include <iostream>
+
+#include "json/json.hpp"
 
 #include "TabletPacket.h"
+#include "TabletConfig.h"
 
 class TabletDriver {
 private:
@@ -25,9 +30,11 @@ private:
 
 	unsigned char buffer[100] = {0};
 
-	bool m_DriverCrashed = false;
+	volatile bool m_DriverCrashed = false;
 
 	std::thread* eventThread = nullptr;
+
+	static TabletConfig* s_Configs;
 
 public:
 	TabletDriver(const char* configFolder);
@@ -46,4 +53,6 @@ private:
 
 	static int hotplug_callback(libusb_context* context, libusb_device* device, libusb_hotplug_event event, void* user_data);
 	static void event_thread(TabletDriver* instance);
+
+	static void readConfigs(const char* configFolder);
 };
