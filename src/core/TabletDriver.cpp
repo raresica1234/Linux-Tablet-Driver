@@ -13,7 +13,7 @@ TabletDriver::TabletDriver(const char* configFolder) {
 
 	m_FoundTablet = findTablet();
 	if (!m_FoundTablet) {
-		printf("Could not find tablet.");
+		printf("Could not find tablet.\n");
 		m_DriverCrashed = true;
 		return;
 	}
@@ -32,8 +32,9 @@ TabletDriver::TabletDriver(const char* configFolder) {
 		assert(res == LIBUSB_SUCCESS);
 	}
 
-	printf("Creating thread for event pulling");
+	printf("Creating thread for event pulling\n");
 	eventThread = new std::thread(event_thread, this);
+	eventThread->detach();
 }
 
 TabletDriver::~TabletDriver() {
@@ -66,7 +67,7 @@ bool TabletDriver::findTablet() {
 		printf("Trying to find tablet %s\n", name);
 
 
-		for (size_t i = 0; i <= s_Configs[i].deviceName.size(); i++)
+		for (size_t i = 0; i <= strlen(name); i++)
 			uname[i] = static_cast<unsigned char>(name[i]);
 
 		unsigned char productName[250] = {0};
@@ -78,14 +79,13 @@ bool TabletDriver::findTablet() {
 			res = libusb_open(m_List[i], &deviceHandle);
 			assert(res == LIBUSB_SUCCESS);
 			res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
-			printf("Found device, checking if it's the correct name...\n");
-			if (memcmp(productName, uname, s_Configs[i].deviceName.size()) == 0) {
+			printf("Found device %s, checking if it's the correct name...\n", productName);
+			if (memcmp(productName, uname, s_Configs[i].deviceName.size() + 1) == 0) {
 				m_TabletHandle = deviceHandle;
 				m_TabletDevice = m_List[i];
 				return true;
 			}
 			libusb_close(deviceHandle);
-			printf("Closing %s\n", productName);
 		}
 	}
 
@@ -97,7 +97,7 @@ void TabletDriver::kernelClaim() {
 		printf("Kernel driver is active, detaching...\n");
 		int res = libusb_detach_kernel_driver(m_TabletHandle, 0);
 		if (res != 0) {
-			printf("Could not deatch kernel driver");
+			printf("Could not deatch kernel driver\n");
 			m_DriverCrashed = true;
 			return;
 		}
