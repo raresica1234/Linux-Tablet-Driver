@@ -12,6 +12,7 @@
 
 #include "TabletPacket.h"
 #include "TabletConfig.h"
+#include "util/Area.h"
 
 class TabletDriver {
 private:
@@ -35,6 +36,7 @@ private:
 	std::thread* eventThread = nullptr;
 
 	static TabletConfig* s_Configs;
+	static size_t s_ConfigsSize;
 
 public:
 	TabletDriver(const char* configFolder);

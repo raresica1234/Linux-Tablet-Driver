@@ -1,6 +1,7 @@
 #include "TabletDriver.h"
 
 TabletConfig* TabletDriver::s_Configs = nullptr;
+size_t TabletDriver::s_ConfigsSize = 0;
 
 TabletDriver::TabletDriver(const char* configFolder) {
 	libusb_init(&m_Context);
@@ -57,32 +58,37 @@ void TabletDriver::pullEvents() {
 }
 
 bool TabletDriver::findTablet() {
-	// hardcoded name for now
-	const char* name = "G430S";
-
 	int res = 0;
-	unsigned char uname[250] = {0};
-	for (size_t i = 0; i <= strlen(name); i++)
-		uname[i] = static_cast<unsigned char>(name[i]);
+	unsigned char uname[250];
+	for (size_t i = 0; i < s_ConfigsSize; i++) {
+		memset(uname, 0, 250);
+		const char* name = s_Configs[i].deviceName.c_str();
+		printf("Trying to find tablet %s\n", name);
 
-	unsigned char productName[250] = {0};
-	for (size_t i = 0; i < m_ListSize; i++) {
-		libusb_device_descriptor desc = {0};
-		res = libusb_get_device_descriptor(m_List[i], &desc);
-		assert(res == LIBUSB_SUCCESS);
-		libusb_device_handle* deviceHandle = NULL;
-		res = libusb_open(m_List[i], &deviceHandle);
-		assert(res == LIBUSB_SUCCESS);
-		res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
-		printf("Found device, checking if it's the correct name...\n");
-		if (memcmp(productName, uname, strlen(name)) == 0) {
-			m_TabletHandle = deviceHandle;
-			m_TabletDevice = m_List[i];
-			return true;
+
+		for (size_t i = 0; i <= s_Configs[i].deviceName.size(); i++)
+			uname[i] = static_cast<unsigned char>(name[i]);
+
+		unsigned char productName[250] = {0};
+		for (size_t i = 0; i < m_ListSize; i++) {
+			libusb_device_descriptor desc = {0};
+			res = libusb_get_device_descriptor(m_List[i], &desc);
+			assert(res == LIBUSB_SUCCESS);
+			libusb_device_handle* deviceHandle = NULL;
+			res = libusb_open(m_List[i], &deviceHandle);
+			assert(res == LIBUSB_SUCCESS);
+			res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
+			printf("Found device, checking if it's the correct name...\n");
+			if (memcmp(productName, uname, s_Configs[i].deviceName.size()) == 0) {
+				m_TabletHandle = deviceHandle;
+				m_TabletDevice = m_List[i];
+				return true;
+			}
+			libusb_close(deviceHandle);
+			printf("Closing %s\n", productName);
 		}
-		libusb_close(deviceHandle);
-		
 	}
+
 	return false;
 }
 
@@ -146,6 +152,8 @@ void TabletDriver::readConfigs(const char* configFolder) {
 	input >> j;
 	input.close();
 	s_Configs = new TabletConfig[j.size()];
+	s_ConfigsSize = j.size();
+	int pos = 0;
 	for (json::iterator it = j.begin(); it != j.end(); it++) {
 		TabletConfig currentConfig;
 		currentConfig.deviceName = it.key();
@@ -156,5 +164,7 @@ void TabletDriver::readConfigs(const char* configFolder) {
 		currentConfig.virtualHeight = current_iteration["virtualHeight"].get<int>();
 		currentConfig.physicalWidth = current_iteration["physicalWidth"].get<int>();
 		currentConfig.physicalHeight = current_iteration["physicalHeight"].get<int>();
+		s_Configs[pos] = currentConfig;
+		pos++;
 	}
 }
