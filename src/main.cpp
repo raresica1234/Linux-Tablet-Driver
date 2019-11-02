@@ -20,7 +20,7 @@ int main() {
 	TabletDriver* driver = new TabletDriver("config");
 	CursorHelper* cursor = new CursorHelper();
 	g_displayArea = new Area(0, 0, 1920, 1080);
-	g_tabletArea = new Area(0, 16078, 22319, 16689);
+	g_tabletArea = new Area(0, 37.3875f, 69.0f, 38.8125f);
 
 	
 	auto start = std::chrono::system_clock::now();
@@ -37,8 +37,11 @@ int main() {
 		if (driver->foundTablet()) {
 			packet = driver->getData();
 			if(packet.isValid()){
-				Area::map(packet.x, packet.y, g_tabletArea, g_displayArea);
-				cursor->MoveTo(packet.x, packet.y);
+				float x = packet.x;
+				float y = packet.y;
+				driver->mapVirtualtoPhysical(x, y);
+				Area::map(x, y, g_tabletArea, g_displayArea);
+				cursor->MoveTo((int)x, (int)y);
 				if (packet.button == MouseButton::MouseButton1 && previous == 0) {
 					cursor->Click(MouseButton::MouseButton1);
 					previous = 1;

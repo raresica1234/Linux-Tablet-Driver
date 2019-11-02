@@ -37,6 +37,9 @@ private:
 
 	static TabletConfig* s_Configs;
 	static size_t s_ConfigsSize;
+	
+	Area* m_TabletVirtualArea;
+	Area* m_TabletPhysicalArea;
 
 public:
 	TabletDriver(const char* configFolder);
@@ -46,6 +49,8 @@ public:
 
 	inline bool foundTablet() { return m_FoundTablet; }
 	inline bool hasCrashed() { return m_DriverCrashed; }
+
+	inline void mapVirtualtoPhysical(float& x, float& y) { Area::map(x, y, m_TabletVirtualArea, m_TabletPhysicalArea); }
 
 private:
 	void pullEvents();

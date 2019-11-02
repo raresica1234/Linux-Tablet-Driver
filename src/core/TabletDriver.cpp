@@ -40,6 +40,10 @@ TabletDriver::TabletDriver(const char* configFolder) {
 TabletDriver::~TabletDriver() {
 	eventThread->join();
 	delete eventThread;
+
+	delete m_TabletVirtualArea;
+	delete m_TabletPhysicalArea;
+
 	libusb_release_interface(m_TabletHandle, 0);
 	libusb_close(m_TabletHandle);
 	libusb_free_device_list(m_List, 1);
@@ -61,9 +65,9 @@ void TabletDriver::pullEvents() {
 bool TabletDriver::findTablet() {
 	int res = 0;
 	unsigned char uname[250];
-	for (size_t i = 0; i < s_ConfigsSize; i++) {
+	for (size_t currentConfig = 0; currentConfig < s_ConfigsSize; currentConfig++) {
 		memset(uname, 0, 250);
-		const char* name = s_Configs[i].deviceName.c_str();
+		const char* name = s_Configs[currentConfig].deviceName.c_str();
 		printf("Trying to find tablet %s\n", name);
 
 
@@ -80,9 +84,13 @@ bool TabletDriver::findTablet() {
 			assert(res == LIBUSB_SUCCESS);
 			res = libusb_get_string_descriptor_ascii(deviceHandle, desc.iProduct, productName, sizeof(productName));
 			printf("Found device %s, checking if it's the correct name...\n", productName);
-			if (memcmp(productName, uname, s_Configs[i].deviceName.size() + 1) == 0) {
+			if (memcmp(productName, uname, s_Configs[currentConfig].deviceName.size()) == 0) {
 				m_TabletHandle = deviceHandle;
 				m_TabletDevice = m_List[i];
+
+				printf("Creating Areas\n");
+				m_TabletVirtualArea = new Area(0, 0, s_Configs[currentConfig].virtualWidth, s_Configs[currentConfig].virtualHeight);
+				m_TabletPhysicalArea = new Area(0, 0, s_Configs[currentConfig].physicalWidth, s_Configs[currentConfig].physicalHeight);
 				return true;
 			}
 			libusb_close(deviceHandle);
