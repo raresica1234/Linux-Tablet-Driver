@@ -7,9 +7,7 @@ Area::Area(float x, float y, float width, float height)
 }
 
 
-void Area::map(int &xVal, int &yVal, Area *from, Area *to) {
-	float xval = ((float)xVal - from->x) / from->width * to->width + to->x;
-	float yval = ((float)yVal - from->y) / from->height * to->height + to->y;
-	xVal = (int)xval;
-	yVal = (int)yval;
+void Area::map(float &xVal, float &yVal, Area *from, Area *to) {
+	xVal = ((float)xVal - from->x) / from->width * to->width + to->x;
+	yVal = ((float)yVal - from->y) / from->height * to->height + to->y;
 }

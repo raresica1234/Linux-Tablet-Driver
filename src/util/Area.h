@@ -8,5 +8,5 @@ struct Area {
 
 	Area(float x, float y, float width, float height);
 
-	static void map(int &xVal, int &yVal, Area *from, Area *to);
+	static void map(float &xVal, float &yVal, Area *from, Area *to);
 };
