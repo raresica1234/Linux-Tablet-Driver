@@ -7,8 +7,8 @@ struct TabletConfig {
 	int numButtons;
 	int virtualWidth;
 	int virtualHeight;
-	int physicalWidth;
-	int physicalHeight;
+	float physicalWidth;
+	float physicalHeight;
 
 	TabletConfig() {}
 
