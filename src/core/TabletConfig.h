@@ -9,4 +9,11 @@ struct TabletConfig {
 	int virtualHeight;
 	int physicalWidth;
 	int physicalHeight;
+
+	TabletConfig() {}
+
+	TabletConfig(const TabletConfig& other) {
+		deviceName = other.deviceName;
+		vendorName = other.vendorName;
+	}
 };
