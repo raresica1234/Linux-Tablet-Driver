@@ -170,8 +170,8 @@ void TabletDriver::readConfigs(const char* configFolder) {
 		currentConfig.numButtons = current_iteration["numButtons"].get<int>();
 		currentConfig.virtualWidth = current_iteration["virtualWidth"].get<int>();
 		currentConfig.virtualHeight = current_iteration["virtualHeight"].get<int>();
-		currentConfig.physicalWidth = current_iteration["physicalWidth"].get<int>();
-		currentConfig.physicalHeight = current_iteration["physicalHeight"].get<int>();
+		currentConfig.physicalWidth = current_iteration["physicalWidth"].get<float>();
+		currentConfig.physicalHeight = current_iteration["physicalHeight"].get<float>();
 		s_Configs[pos] = currentConfig;
 		pos++;
 	}
