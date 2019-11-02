@@ -13,7 +13,12 @@ struct TabletConfig {
 	TabletConfig() {}
 
 	TabletConfig(const TabletConfig& other) {
-		deviceName = other.deviceName;
-		vendorName = other.vendorName;
+		deviceName 		= other.deviceName;
+		vendorName 		= other.vendorName;
+		numButtons 		= other.numButtons;
+		virtualWidth 	= other.virtualWidth;
+		virtualHeight 	= other.virtualHeight;
+		physicalWidth 	= other.physicalWidth;
+		physicalHeight 	= other.physicalHeight;
 	}
 };
