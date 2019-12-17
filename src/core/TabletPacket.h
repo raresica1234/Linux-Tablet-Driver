@@ -20,13 +20,6 @@ struct TabletPacket {
 		pressure 	= static_cast<int>(data[offset + 7] << 8 | data[offset + 6]);
 	}
 
-	void operator==(const TabletPacket& other) {
-		this->button 	= other.button;
-		this->x 		= other.x;
-		this->y 		= other.y;
-		this->pressure 	= other.pressure;
-	}
-
 	bool isValid() {
 		return (x != -1) && (y != -1) && (pressure != -1);
 	}
