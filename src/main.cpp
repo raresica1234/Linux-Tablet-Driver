@@ -29,8 +29,10 @@ int main() {
 
 	std::chrono::duration<double> elapsed;
 
-	int previous = 0;
+	bool button1 = false, button2 = false;
 	TabletPacket packet;
+
+	
 
 	while (!driver->hasCrashed()) {
 		frames++;
@@ -42,12 +44,22 @@ int main() {
 				driver->mapVirtualtoPhysical(x, y);
 				Area::map(x, y, g_tabletArea, g_displayArea);
 				cursor->MoveTo((int)x, (int)y);
-				if (packet.button == MouseButton::MouseButton1 && previous == 0) {
+				if (packet.button == MouseButton::MouseButton1 && !button1) {
 					cursor->Click(MouseButton::MouseButton1);
-					previous = 1;
-				} else if (packet.button == MouseButton::NoButton && previous == 1) {
-					cursor->Release(MouseButton::MouseButton1);
-					previous = 0;
+					button1 = true;
+				} else if (packet.button == MouseButton::MouseButton2 && !button2) {
+					// For some reason MouseButton3 is actually right click
+					// even though on the packet, MouseButton2 is mapped to the right button
+					cursor->Click(MouseButton::MouseButton3);
+					button2 = true;
+				} else if (packet.button == MouseButton::NoButton) {
+					if (button1) {
+						cursor->Release(MouseButton::MouseButton1);
+						button1 = false;
+					} else if (button2) {
+						cursor->Release(MouseButton::MouseButton3);
+						button2 = false;
+					}
 				}
 			}
 		}
